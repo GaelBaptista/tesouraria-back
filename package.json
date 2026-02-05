@@ -1,0 +1,43 @@
+{
+  "name": "tesouraria-back",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate:dev": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js migration:run -d ./src/db/data-source.ts",
+    "migrate:reset": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js migration:revert -d ./src/db/data-source.ts",
+    "typeorm": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.0.0",
+    "@fastify/sensible": "^6.0.4",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "fastify": "^5.7.4",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
+    "pg": "^8.18.0",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.28",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.9.3"
+  }
+}
