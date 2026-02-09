@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "migrate:dev": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js migration:run -d ./src/db/data-source.ts",
     "migrate:reset": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js migration:revert -d ./src/db/data-source.ts",
+    "migrate:prod": "node ./node_modules/typeorm/cli.js migration:run -d ./dist/db/data-source.js",
     "typeorm": "ts-node-dev --transpile-only ./node_modules/typeorm/cli.js"
   },
   "keywords": [],

@@ -11,15 +11,37 @@ import { MissionIncome } from "../entities/MissionIncome"
 
 dotenv.config()
 
+const isProd = process.env.NODE_ENV === "production"
+
 export const AppDataSource = new DataSource({
   type: "postgres",
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT || 5432),
-  username: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASS || "postgres",
-  database: process.env.DB_NAME || "tesouraria",
+
+  // ✅ Render: use DATABASE_URL
+  // ✅ Local: cai para DB_HOST/DB_PORT/etc
+  url: process.env.DATABASE_URL,
+
+  host: process.env.DATABASE_URL
+    ? undefined
+    : process.env.DB_HOST || "localhost",
+  port: process.env.DATABASE_URL
+    ? undefined
+    : Number(process.env.DB_PORT || 5432),
+  username: process.env.DATABASE_URL
+    ? undefined
+    : process.env.DB_USER || "postgres",
+  password: process.env.DATABASE_URL
+    ? undefined
+    : process.env.DB_PASS || "postgres",
+  database: process.env.DATABASE_URL
+    ? undefined
+    : process.env.DB_NAME || "tesouraria",
+
+  // ✅ SSL no Render (e em clouds em geral)
+  ssl: isProd ? { rejectUnauthorized: false } : false,
+
   synchronize: false, // profissional: usar migration
   logging: false,
+
   entities: [
     User,
     BankAccount,
@@ -29,5 +51,9 @@ export const AppDataSource = new DataSource({
     MissionCampaign,
     MissionIncome,
   ],
-  migrations: ["src/db/migrations/*.ts"],
+
+  // ✅ migrations: TS no dev, JS no build/prod
+  migrations: isProd
+    ? ["dist/db/migrations/*.{js,cjs}"]
+    : ["src/db/migrations/*.{ts,js}"],
 })
