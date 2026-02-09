@@ -1,4 +1,4 @@
-import { Router } from "express"
+import { Router, Request, Response } from "express"
 import { login, register } from "../controllers/auth.controller"
 import { auth } from "../middlewares/auth"
 
@@ -7,11 +7,13 @@ import {
   createAccount,
   deleteAccount,
 } from "../controllers/accounts.controller"
+
 import {
   listTransactions,
   createTransaction,
   deleteTransaction,
 } from "../controllers/transactions.controller"
+
 import {
   listMissionIncomes,
   createMissionIncome,
@@ -20,28 +22,32 @@ import {
   getMissionProgress,
   deleteMissionIncome,
 } from "../controllers/missions.controller"
+
 import {
   listCampaigns,
   createCampaign,
   updateCampaign,
   getCampaignProgress,
 } from "../controllers/campaigns.controller"
+
 import {
   listBills,
   createBill,
   updateBill,
   deleteBill,
 } from "../controllers/bills.controller"
+
 import {
   listUsers,
   createUser,
   deleteUser,
 } from "../controllers/users.controller"
+
 import { getSettings, patchSettings } from "../controllers/settings.controller"
 
 export const routes = Router()
 
-routes.get("/health", (_, res) => res.json({ ok: true }))
+routes.get("/health", (_req: Request, res: Response) => res.json({ ok: true }))
 
 routes.post("/auth/register", register)
 routes.post("/auth/login", login)
@@ -111,5 +117,5 @@ routes.get("/configuracoes", getSettings) // alias em português
 routes.patch("/settings", patchSettings)
 routes.patch("/configuracoes", patchSettings)
 
-// Health check
-routes.get("/closings", (_, res) => res.json([]))
+// Health check/placeholder
+routes.get("/closings", (_req: Request, res: Response) => res.json([]))
