@@ -1,10 +1,17 @@
 import type { Request, Response } from "express"
 import { AppDataSource } from "../db/data-source"
 import { MissionCampaign, CampaignStatus } from "../entities/MissionCampaign"
+import { getAuthUserId } from "../utils/auth-user"
 
 export async function listCampaigns(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const repo = AppDataSource.getRepository(MissionCampaign)
-  const campaigns = await repo.find({ order: { created_at: "DESC" as any } })
+  const campaigns = await repo.find({
+    where: { userId },
+    order: { created_at: "DESC" as any },
+  })
 
   return res.json(
     campaigns.map((c: MissionCampaign) => ({
@@ -21,6 +28,9 @@ export async function listCampaigns(req: Request, res: Response) {
 }
 
 export async function createCampaign(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { name, target, startDate } = req.body
 
   // Validações
@@ -29,12 +39,16 @@ export async function createCampaign(req: Request, res: Response) {
   }
 
   if (typeof name !== "string" || name.trim().length === 0) {
-    return res.status(400).json({ message: "Nome deve ser uma string não-vazia" })
+    return res
+      .status(400)
+      .json({ message: "Nome deve ser uma string não-vazia" })
   }
 
   const targetNum = Number(target)
   if (isNaN(targetNum) || targetNum <= 0) {
-    return res.status(400).json({ message: "Target deve ser um número maior que 0" })
+    return res
+      .status(400)
+      .json({ message: "Target deve ser um número maior que 0" })
   }
 
   const startDateObj = new Date(startDate)
@@ -45,12 +59,13 @@ export async function createCampaign(req: Request, res: Response) {
   // Verificar se já existe campanha ativa
   const repo = AppDataSource.getRepository(MissionCampaign)
   const existingActive = await repo.findOne({
-    where: { status: CampaignStatus.ACTIVE },
+    where: { status: CampaignStatus.ACTIVE, userId },
   })
 
   if (existingActive) {
     return res.status(409).json({
-      message: "Já existe uma campanha ativa. Finalize a atual antes de criar uma nova.",
+      message:
+        "Já existe uma campanha ativa. Finalize a atual antes de criar uma nova.",
     })
   }
 
@@ -60,6 +75,7 @@ export async function createCampaign(req: Request, res: Response) {
     startDate: startDateObj,
     endDate: null,
     status: CampaignStatus.ACTIVE,
+    userId,
   })
 
   const created = await repo.save(campaign)
@@ -77,11 +93,14 @@ export async function createCampaign(req: Request, res: Response) {
 }
 
 export async function updateCampaign(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { id } = req.params as { id: string }
   const { status, endDate } = req.body
 
   const repo = AppDataSource.getRepository(MissionCampaign)
-  const campaign = await repo.findOne({ where: { id } })
+  const campaign = await repo.findOne({ where: { id, userId } })
 
   if (!campaign) {
     return res.status(404).json({ message: "Campanha não encontrada" })
@@ -89,7 +108,9 @@ export async function updateCampaign(req: Request, res: Response) {
 
   if (status === CampaignStatus.COMPLETED) {
     if (!endDate) {
-      return res.status(400).json({ message: "endDate é obrigatório para completar campanha" })
+      return res
+        .status(400)
+        .json({ message: "endDate é obrigatório para completar campanha" })
     }
 
     const endDateObj = new Date(endDate)
@@ -119,6 +140,9 @@ export async function updateCampaign(req: Request, res: Response) {
 }
 
 export async function getCampaignProgress(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { campaignId } = req.query as { campaignId: string }
 
   if (!campaignId) {
@@ -126,7 +150,9 @@ export async function getCampaignProgress(req: Request, res: Response) {
   }
 
   const campaignRepo = AppDataSource.getRepository(MissionCampaign)
-  const campaign = await campaignRepo.findOne({ where: { id: campaignId } })
+  const campaign = await campaignRepo.findOne({
+    where: { id: campaignId, userId },
+  })
 
   if (!campaign) {
     return res.status(404).json({ message: "Campanha não encontrada" })
@@ -134,9 +160,12 @@ export async function getCampaignProgress(req: Request, res: Response) {
 
   const { MissionIncome } = await import("../entities/MissionIncome")
   const incomeRepo = AppDataSource.getRepository(MissionIncome)
-  const incomes = await incomeRepo.find({ where: { campaignId } })
+  const incomes = await incomeRepo.find({ where: { campaignId, userId } })
 
-  const currentProgress = incomes.reduce((sum, income) => sum + Number(income.value), 0)
+  const currentProgress = incomes.reduce(
+    (sum, income) => sum + Number(income.value),
+    0
+  )
   const target = Number(campaign.target)
   const percentage = ((currentProgress / target) * 100).toFixed(2)
   const remaining = Math.max(0, target - currentProgress)

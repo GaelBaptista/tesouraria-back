@@ -1,10 +1,18 @@
 import type { Request, Response } from "express"
 import { AppDataSource } from "../db/data-source"
 import { Transaction } from "../entities/Transaction"
+import { BankAccount } from "../entities/BankAccount"
+import { getAuthUserId } from "../utils/auth-user"
 
 export async function listTransactions(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const repo = AppDataSource.getRepository(Transaction)
-  const items = await repo.find({ order: { date: "DESC" as any } })
+  const items = await repo.find({
+    where: { userId },
+    order: { date: "DESC" as any },
+  })
   return res.json(
     items.map((t: Transaction) => ({
       id: t.id,
@@ -22,6 +30,9 @@ export async function listTransactions(req: Request, res: Response) {
 }
 
 export async function createTransaction(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const {
     type,
     value,
@@ -31,7 +42,6 @@ export async function createTransaction(req: Request, res: Response) {
     accountId,
     toAccountId,
     isRecurring,
-    userId,
   } = req.body
   if (!type || !value || !date || !description || !category || !accountId) {
     return res.status(400).json({ message: "Campos obrigatórios ausentes" })
@@ -46,6 +56,33 @@ export async function createTransaction(req: Request, res: Response) {
     })
   }
 
+  const accountsRepo = AppDataSource.getRepository(BankAccount)
+  const sourceAccount = await accountsRepo.findOne({
+    where: { id: accountId, userId },
+  })
+  if (!sourceAccount) {
+    return res.status(400).json({
+      message: "Conta de origem não encontrada para o usuário autenticado",
+    })
+  }
+
+  if (toAccountId) {
+    if (!uuidRegex.test(toAccountId)) {
+      return res.status(400).json({
+        message: "toAccountId deve ser um UUID válido",
+      })
+    }
+
+    const destinationAccount = await accountsRepo.findOne({
+      where: { id: toAccountId, userId },
+    })
+    if (!destinationAccount) {
+      return res.status(400).json({
+        message: "Conta de destino não encontrada para o usuário autenticado",
+      })
+    }
+  }
+
   const repo = AppDataSource.getRepository(Transaction)
   const tx = repo.create({
     type,
@@ -56,7 +93,7 @@ export async function createTransaction(req: Request, res: Response) {
     accountId,
     toAccountId: toAccountId || null,
     isRecurring: !!isRecurring,
-    userId: userId || null,
+    userId,
   })
 
   const created = await repo.save(tx)
@@ -75,8 +112,11 @@ export async function createTransaction(req: Request, res: Response) {
 }
 
 export async function deleteTransaction(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { id } = req.params as { id: string }
   const repo = AppDataSource.getRepository(Transaction)
-  await repo.delete({ id })
+  await repo.delete({ id, userId })
   return res.status(204).send()
 }

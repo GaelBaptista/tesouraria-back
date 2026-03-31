@@ -23,14 +23,24 @@ export class AddMissionCampaigns1700000000002 implements MigrationInterface {
 
     // Adicionar coluna campaignId em mission_incomes
     await queryRunner.query(`
-      ALTER TABLE mission_incomes ADD COLUMN "campaignId" uuid
+      ALTER TABLE mission_incomes ADD COLUMN IF NOT EXISTS "campaignId" uuid
     `)
 
     // Adicionar constraint FK
     await queryRunner.query(`
-      ALTER TABLE mission_incomes 
-      ADD CONSTRAINT fk_mission_incomes_campaign_id 
-      FOREIGN KEY ("campaignId") REFERENCES mission_campaigns(id) ON DELETE CASCADE
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conname = 'fk_mission_incomes_campaign_id'
+        ) THEN
+          ALTER TABLE mission_incomes
+          ADD CONSTRAINT fk_mission_incomes_campaign_id
+          FOREIGN KEY ("campaignId") REFERENCES mission_campaigns(id) ON DELETE CASCADE;
+        END IF;
+      END
+      $$
     `)
 
     // Criar índices em mission_incomes
@@ -40,9 +50,15 @@ export class AddMissionCampaigns1700000000002 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_mission_incomes_campaign_id`)
-    await queryRunner.query(`ALTER TABLE mission_incomes DROP CONSTRAINT fk_mission_incomes_campaign_id`)
-    await queryRunner.query(`ALTER TABLE mission_incomes DROP COLUMN "campaignId"`)
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS idx_mission_incomes_campaign_id`
+    )
+    await queryRunner.query(
+      `ALTER TABLE mission_incomes DROP CONSTRAINT IF EXISTS fk_mission_incomes_campaign_id`
+    )
+    await queryRunner.query(
+      `ALTER TABLE mission_incomes DROP COLUMN IF EXISTS "campaignId"`
+    )
     await queryRunner.query(`DROP INDEX IF EXISTS idx_mission_campaigns_status`)
     await queryRunner.query(`DROP TABLE IF EXISTS mission_campaigns`)
   }

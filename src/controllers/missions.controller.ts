@@ -2,15 +2,22 @@ import type { Request, Response } from "express"
 import { AppDataSource } from "../db/data-source"
 import { MissionIncome, MissionIncomeSource } from "../entities/MissionIncome"
 import { MissionCampaign } from "../entities/MissionCampaign"
+import { getAuthUserId } from "../utils/auth-user"
 
 export async function listMissionIncomes(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { campaignId } = req.query as { campaignId?: string }
 
   const repo = AppDataSource.getRepository(MissionIncome)
-  let query = repo.createQueryBuilder("income").orderBy("income.date", "DESC")
+  let query = repo
+    .createQueryBuilder("income")
+    .where("income.userId = :userId", { userId })
+    .orderBy("income.date", "DESC")
 
   if (campaignId) {
-    query = query.where("income.campaignId = :campaignId", { campaignId })
+    query = query.andWhere("income.campaignId = :campaignId", { campaignId })
   }
 
   const items = await query.getMany()
@@ -30,6 +37,9 @@ export async function listMissionIncomes(req: Request, res: Response) {
 }
 
 export async function createMissionIncome(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { campaignId, source, value, date, description } = req.body
 
   if (!campaignId || !source || !value || !date) {
@@ -59,7 +69,9 @@ export async function createMissionIncome(req: Request, res: Response) {
   }
 
   const campaignRepo = AppDataSource.getRepository(MissionCampaign)
-  const campaign = await campaignRepo.findOne({ where: { id: campaignId } })
+  const campaign = await campaignRepo.findOne({
+    where: { id: campaignId, userId },
+  })
 
   if (!campaign) {
     return res.status(404).json({ message: "Campanha não encontrada" })
@@ -72,6 +84,7 @@ export async function createMissionIncome(req: Request, res: Response) {
     value: String(valueNum),
     date,
     description: description || null,
+    userId,
   })
 
   const created = await repo.save(income)
@@ -89,6 +102,9 @@ export async function createMissionIncome(req: Request, res: Response) {
 }
 
 export async function getMissionReport(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { campaignId } = req.query as { campaignId: string }
 
   if (!campaignId) {
@@ -96,7 +112,7 @@ export async function getMissionReport(req: Request, res: Response) {
   }
 
   const repo = AppDataSource.getRepository(MissionIncome)
-  const items = await repo.find({ where: { campaignId } })
+  const items = await repo.find({ where: { campaignId, userId } })
 
   const sourceValues: Record<string, number> = {
     Ofertas: 0,
@@ -125,15 +141,21 @@ export async function getMissionReport(req: Request, res: Response) {
 }
 
 export async function getMissionTotal(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const repo = AppDataSource.getRepository(MissionIncome)
-  const items = await repo.find()
+  const items = await repo.find({ where: { userId } })
   const total = items.reduce((sum, item) => sum + Number(item.value), 0)
   return res.json({ total: total.toFixed(2) })
 }
 
 export async function getMissionProgress(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const missionRepo = AppDataSource.getRepository(MissionIncome)
-  const missionItems = await missionRepo.find()
+  const missionItems = await missionRepo.find({ where: { userId } })
   const currentProgress = missionItems.reduce(
     (sum, item) => sum + Number(item.value),
     0
@@ -141,7 +163,7 @@ export async function getMissionProgress(req: Request, res: Response) {
 
   const { Settings } = await import("../entities/Settings")
   const settingsRepo = AppDataSource.getRepository(Settings)
-  const settings = await settingsRepo.findOne({ where: {} })
+  const settings = await settingsRepo.findOne({ where: { userId } })
 
   const missionTarget = settings ? Number(settings.missionTarget) : 5000
 
@@ -154,9 +176,12 @@ export async function getMissionProgress(req: Request, res: Response) {
 }
 
 export async function deleteMissionIncome(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { id } = req.params as { id: string }
   const repo = AppDataSource.getRepository(MissionIncome)
-  const result = await repo.delete({ id })
+  const result = await repo.delete({ id, userId })
 
   if (result.affected === 0) {
     return res.status(404).json({ message: "Entrada não encontrada" })

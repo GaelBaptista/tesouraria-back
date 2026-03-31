@@ -37,7 +37,10 @@ export class MissionCampaign {
   })
   status!: CampaignStatus
 
-  @OneToMany(() => MissionIncome, (income) => income.campaign, {
+  @Column({ type: "uuid" })
+  userId!: string
+
+  @OneToMany(() => MissionIncome, income => income.campaign, {
     cascade: true,
   })
   incomes!: MissionIncome[]

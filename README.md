@@ -69,6 +69,8 @@ npm run migrate:reset
 npm run dev
 ```
 
+Ao subir a API, as migrations pendentes passam a ser aplicadas automaticamente.
+
 O servidor estará disponível em `http://localhost:3333/api`
 
 ### Produção

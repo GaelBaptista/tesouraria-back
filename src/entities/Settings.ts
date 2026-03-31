@@ -17,10 +17,12 @@ export class Settings {
   @Column({ type: "jsonb", nullable: true })
   missionProjects?: { name: string; value: number }[]
 
+  @Column({ type: "uuid" })
+  userId!: string
+
   @CreateDateColumn()
   created_at!: Date
 
   @UpdateDateColumn()
   updated_at!: Date
 }
-

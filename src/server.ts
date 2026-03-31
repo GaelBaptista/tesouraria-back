@@ -12,6 +12,11 @@ async function bootstrap() {
   await AppDataSource.initialize()
   console.log("DB conectado ✅")
 
+  const migrations = await AppDataSource.runMigrations()
+  if (migrations.length > 0) {
+    console.log(`Migrations aplicadas: ${migrations.length} ✅`)
+  }
+
   const app = express()
 
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",")

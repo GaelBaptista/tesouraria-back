@@ -23,10 +23,12 @@ export class BankAccount {
   @Column({ type: "numeric", precision: 14, scale: 2, default: 0 })
   initialBalance!: string // TypeORM com numeric -> string
 
+  @Column({ type: "uuid" })
+  userId!: string
+
   @CreateDateColumn()
   created_at!: Date
 
   @UpdateDateColumn()
   updated_at!: Date
 }
-

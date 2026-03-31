@@ -38,10 +38,12 @@ export class Bill {
   @Column({ nullable: true })
   lastPaymentDate?: string
 
+  @Column({ type: "uuid" })
+  userId!: string
+
   @CreateDateColumn()
   created_at!: Date
 
   @UpdateDateColumn()
   updated_at!: Date
 }
-

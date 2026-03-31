@@ -1,10 +1,17 @@
 import type { Request, Response } from "express"
 import { AppDataSource } from "../db/data-source"
 import { Bill } from "../entities/Bill"
+import { getAuthUserId } from "../utils/auth-user"
 
 export async function listBills(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const repo = AppDataSource.getRepository(Bill)
-  const bills = await repo.find({ order: { created_at: "DESC" } })
+  const bills = await repo.find({
+    where: { userId },
+    order: { created_at: "DESC" },
+  })
   return res.json(
     bills.map((b: Bill) => ({
       id: b.id,
@@ -20,6 +27,9 @@ export async function listBills(req: Request, res: Response) {
 }
 
 export async function createBill(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { description, value, dueDate, category, isRecurring, status } =
     req.body
   if (!description || !value || !dueDate || !category) {
@@ -34,6 +44,7 @@ export async function createBill(req: Request, res: Response) {
     category,
     isRecurring: isRecurring ?? true,
     status: status || "Pendente",
+    userId,
   })
 
   const created = await repo.save(bill)
@@ -50,10 +61,13 @@ export async function createBill(req: Request, res: Response) {
 }
 
 export async function updateBill(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { id } = req.params as { id: string }
   const repo = AppDataSource.getRepository(Bill)
 
-  const existing = await repo.findOne({ where: { id } })
+  const existing = await repo.findOne({ where: { id, userId } })
   if (!existing)
     return res.status(404).json({ message: "Conta não encontrada" })
 
@@ -80,9 +94,11 @@ export async function updateBill(req: Request, res: Response) {
 }
 
 export async function deleteBill(req: Request, res: Response) {
+  const userId = getAuthUserId(req)
+  if (!userId) return res.status(401).json({ message: "Token inválido" })
+
   const { id } = req.params as { id: string }
   const repo = AppDataSource.getRepository(Bill)
-  await repo.delete({ id })
+  await repo.delete({ id, userId })
   return res.status(204).send()
 }
-

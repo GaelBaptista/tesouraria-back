@@ -46,6 +46,9 @@ export class MissionIncome {
   @Column({ type: "varchar", length: 200, nullable: true })
   description!: string | null
 
+  @Column({ type: "uuid" })
+  userId!: string
+
   @CreateDateColumn()
   created_at!: Date
 
